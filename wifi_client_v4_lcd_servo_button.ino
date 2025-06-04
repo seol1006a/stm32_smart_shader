@@ -54,6 +54,8 @@ char lcdLine2[17] = "WiFi Connecting!";
 int cds = 0;
 unsigned int secCount;
 unsigned int myservoTime = 0;
+unsigned long prevMillis = 0;
+const unsigned long interval = 4000;
 
 char getSensorId[10];
 int sensorTime;
@@ -104,25 +106,44 @@ void setup() {
 }
 
 void loop() {
+  if (millis() - prevMillis >= interval) {
+    prevMillis = millis();
+//    Serial.println("[SEOL_LIN]SEND@23.5@56.7@1980@300");  // 예시 데이터
+  }
+
+  // 서버 응답 수신
+  if (Serial.available()) {
+    String msg = Serial.readStringUntil('\n');
+    Serial.print("받은 메시지: "); 
+    Serial.println(msg);
+    if (msg.startsWith("[SEOL_LIN]SEND_DATA")) {
+      // 예: [SEOL_LIN]SEND_DATA@23.5@56.7@1980@300
+      int idx1 = msg.indexOf('@');
+      int idx2 = msg.indexOf('@', idx1 + 1);
+      int idx3 = msg.indexOf('@', idx2 + 1);
+      int idx4 = msg.indexOf('@', idx3 + 1);
+      
+      String temp = msg.substring(idx1 + 1, idx2);
+      String humi = msg.substring(idx2 + 1, idx3);
+      String var = msg.substring(idx3 + 1, idx4);
+      String cds  = msg.substring(idx4 + 1);
+
+      // 출력
+      Serial.print("온도: "); Serial.println(temp);
+      Serial.print("습도: "); Serial.println(humi);
+      Serial.print("수분: "); Serial.println(var);
+      Serial.print("조도: "); Serial.println(cds);
+    }
+  }
   if (client.available()) {
     socketEvent();
-  }
+  
 
   if (timerIsrFlag)  //1초에 한번씩 실행
   {
     timerIsrFlag = false;
-    int i=0;
-    sprintf(sendBuf, "[SQL]GETDB@illu@%d\n", i + 1);
-    wifiSerial.write(sendBuf, strlen(sendBuf));
-    Serial.println(sendBuf);
-    delay(50);  //using Double-serial
-
-    sprintf(sendBuf, "[SQL]GETDB@water@%d\n", i + 1);
-    wifiSerial.write(sendBuf, strlen(sendBuf));
-    Serial.println(sendBuf);
-    delay(50);  //using Double-serial
-    }
-    
+      }
+     
 
     if (!(secCount % 5))  //5초에 한번씩 실행
     {
